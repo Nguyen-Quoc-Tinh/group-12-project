@@ -1,4 +1,3 @@
-
 const User = require("../models/userModel");
 
 // 📦 Lấy danh sách người dùng
