@@ -4,6 +4,7 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const RefreshToken = require("../models/refreshTokenModel");
 require("dotenv").config();
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -80,12 +81,33 @@ router.post("/login", async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES_IN || "1d",
     });
 
+    const refreshExpiresInDays = Number(process.env.REFRESH_TOKEN_EXPIRES_IN_DAYS || 7);
+    const rawRefreshToken = crypto.randomBytes(64).toString("hex");
+    const hashedRefreshToken = crypto
+      .createHash("sha256")
+      .update(rawRefreshToken)
+      .digest("hex");
+    const refreshTokenExpiresAt = new Date(
+      Date.now() + refreshExpiresInDays * 24 * 60 * 60 * 1000
+    );
+
+    // Ensure a single active refresh token per user
+    await RefreshToken.deleteMany({ user: user._id });
+
+    await RefreshToken.create({
+      user: user._id,
+      token: hashedRefreshToken,
+      expiresAt: refreshTokenExpiresAt,
+    });
+
     const userData = user.toObject();
     delete userData.password;
 
     res.json({
       message: "Đăng nhập thành công!",
       token,
+      refreshToken: rawRefreshToken,
+      refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString(),
       user: userData,
     });
   } catch (err) {
@@ -97,8 +119,73 @@ router.post("/login", async (req, res) => {
 // ==========================
 // 🚪 Logout
 // ==========================
-router.post("/logout", (req, res) => {
-  res.json({ message: "Đăng xuất thành công (xoá token ở frontend)" });
+router.post("/logout", async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: "Thiếu refresh token" });
+  }
+
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  await RefreshToken.deleteOne({ token: hashedRefreshToken });
+
+  res.json({ message: "Đăng xuất thành công" });
+});
+
+// ==========================
+// 🔄 Refresh token
+// ==========================
+router.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: "Thiếu refresh token" });
+  }
+
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  try {
+    const storedToken = await RefreshToken.findOne({ token: hashedRefreshToken });
+
+    if (!storedToken) {
+      return res.status(401).json({ message: "Refresh token không hợp lệ" });
+    }
+
+    if (storedToken.expiresAt <= new Date()) {
+      await storedToken.deleteOne();
+      return res.status(401).json({ message: "Refresh token đã hết hạn" });
+    }
+
+    const user = await User.findById(storedToken.user);
+    if (!user) {
+      await storedToken.deleteOne();
+      return res.status(401).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ Thiếu JWT_SECRET trong file .env (refresh)");
+      return res.status(500).json({ message: "Lỗi cấu hình máy chủ" });
+    }
+
+    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+    });
+
+    res.json({
+      message: "Làm mới token thành công",
+      token: newAccessToken,
+    });
+  } catch (err) {
+    console.error("❌ Lỗi refresh token:", err.message);
+    res.status(500).json({ message: "Lỗi server" });
+  }
 });
 
 // ==========================
