@@ -2,8 +2,13 @@
   --bg: #f6f8ff;
   --card: #ffffff;
   --muted: #6b7280;
+<<<<<<< HEAD
   --accent: #4f46e5; /* indigo-600 */
   --accent-600: #4338ca;
+=======
+  --accent: #e546e0; /* indigo-600 */
+  --accent-600: #38c1ca;
+>>>>>>> efc0fd5ac4f69f724a9ff6dfd80107b33072d2cf
   --danger: #ef4444;
   --glass: rgba(255,255,255,0.6);
   --radius: 12px;

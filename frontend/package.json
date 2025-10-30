@@ -1,5 +1,6 @@
 {
   "name": "frontend",
+<<<<<<< HEAD
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -13,6 +14,18 @@
     "react-router-dom": "^7.9.4",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
+=======
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.12.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.3.8",
+    "react-router-dom": "^7.9.4",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^5.1.0"
+>>>>>>> efc0fd5ac4f69f724a9ff6dfd80107b33072d2cf
   },
   "scripts": {
     "start": "react-scripts start",
@@ -20,12 +33,15 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+<<<<<<< HEAD
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
     ]
   },
+=======
+>>>>>>> efc0fd5ac4f69f724a9ff6dfd80107b33072d2cf
   "browserslist": {
     "production": [
       ">0.2%",
