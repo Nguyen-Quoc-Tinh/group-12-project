@@ -13,10 +13,20 @@ app.use(express.json());
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const { logActivity } = require("./midlleware/authMiddleware");
+const { logError, logInfo } = require("./midlleware/logger");
 
+app.use(logActivity);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/profile", profileRoutes);
+
+// Persist unexpected errors to MongoDB before sending response
+app.use(logError);
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(err.status || 500).json({ message: err.message || "Server error" });
+});
 
 // Kết nối MongoDB
 if (!process.env.MONGO_URI) {
@@ -26,7 +36,10 @@ if (!process.env.MONGO_URI) {
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected successfully"))
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+    logInfo("MongoDB connected", { at: new Date().toISOString() }).catch(() => {});
+  })
   .catch((err) => console.error("❌ MongoDB connection error:", err.message));
 
 if (!process.env.JWT_SECRET) {
@@ -40,4 +53,7 @@ app.get("/", (req, res) => {
 
 // Khởi động server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  logInfo("Server started", { port: PORT }).catch(() => {});
+});

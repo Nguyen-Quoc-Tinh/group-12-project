@@ -80,8 +80,9 @@ router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     user.avatar = avatarUrl;
+    user.avatarPublicId = result.public_id;
     await user.save();
-    res.json({ message: 'Avatar uploaded', avatar: avatarUrl });
+    res.json({ message: 'Avatar uploaded', avatar: avatarUrl, publicId: result.public_id });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Upload failed' });
@@ -89,32 +90,4 @@ router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
 });
 
 module.exports = router;
-
-// Upload avatar to Cloudinary
-router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    // upload buffer to cloudinary
-    const streamUpload = (buffer) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ folder: 'avatars' }, (error, result) => {
-          if (result) resolve(result);
-          else reject(error);
-        });
-        streamifier.createReadStream(buffer).pipe(stream);
-      });
-    };
-
-    const result = await streamUpload(req.file.buffer);
-    const avatarUrl = result.secure_url;
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    user.avatar = avatarUrl;
-    await user.save();
-    res.json({ message: 'Avatar uploaded', avatar: avatarUrl });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Upload failed' });
-  }
-});
 

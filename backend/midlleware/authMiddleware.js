@@ -29,6 +29,7 @@
 
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const ActivityLog = require("../models/activityLogModel");
 
 // Middleware: Xác thực token và gắn user vào req.user
 exports.protect = async (req, res, next) => {
@@ -82,4 +83,40 @@ exports.allowSelfOrAdmin = (req, res, next) => {
 
   // Còn lại → bị chặn
   res.status(403).json({ message: "Bạn chỉ có thể thao tác với tài khoản của chính mình" });
+};
+
+// Ghi log hoạt động của request
+exports.logActivity = (req, res, next) => {
+  const start = Date.now();
+  const { method, originalUrl } = req;
+
+  const writeLog = async (statusCode, errorMessage) => {
+    try {
+      await ActivityLog.create({
+        userId: req.user?._id || null,
+        action: originalUrl,
+        ip: req.ip,
+        metadata: {
+          method,
+          statusCode,
+          durationMs: Date.now() - start,
+          error: errorMessage || null,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to write activity log:", err.message);
+    }
+  };
+
+  res.on("finish", () => {
+    writeLog(res.statusCode).catch(() => {});
+  });
+
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      writeLog(res.statusCode, "connection closed").catch(() => {});
+    }
+  });
+
+  next();
 };
