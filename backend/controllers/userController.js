@@ -1,3 +1,4 @@
+
 const User = require("../models/userModel");
 
 // 📦 Lấy danh sách người dùng
@@ -86,3 +87,4 @@ module.exports = {
   updateUser,
   deleteUser,
 };
+
